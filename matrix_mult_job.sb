@@ -28,11 +28,11 @@ module purge
 module load GCC/10.3.0 OpenMPI/4.1.1
 
 # Run our job
-csv_file_name='matrix_mult_openmp.csv'
+csv_file_name='matrix_multultiplication.csv'
 
-executable_name='ping_pong_blocking.out'
+executable_name='matrix_multiplication.out'
 
-mpicxx ping_pong_blocking.cpp -o $executable_name
+mpicxx matrix_multiplication.cpp -o $executable_name
 
 # Matrix Size
 matrix_sizes=()
