@@ -17,7 +17,7 @@ float** createMatrix(int rows, int cols) {
 }
 
 void deleteMatrix(float** matrix, int rows) {
-    
+    // rows = sizeof(matrix) / sizeof(matrix[0]) // Implement this line to take away the necesity of passing in rows
     for (int i = 0; i < rows; i++) {  // Iterate over rows
         delete[] matrix[i];  // Deallocate memory for column at each row pointer
     }
@@ -63,13 +63,22 @@ int main(int argc, char *argv[]) {
     A = BC
     */
 
-    int n = std::atoi(argv[1]); // # Rows of B
-    int m = n; // # Columns of B & # Rows of C
-    int p = n; // # Columns of C
+    int n = std::atoi(argv[1]);     // # Rows of B
+    int m = n;                      // # Columns of B & # Rows of C
+    int p = n;                      // # Columns of C
 
     int totalIterations = std::atoi(argv[2]); // Number of Runs
     
     double sumRunTime = 0; // Add up run times for averaging
+
+    // Check if file exists to avoid overwriting headers
+    bool fileExists = std::ifstream("MatrixMultiplication.csv").good();
+
+    std::ofstream outputFile("MatrixMultiplication.csv", std::ios::app);
+    // Write headers if file does not exist
+    if (!fileExists) {
+        outputFile << "Matrix Size,Threads,Norm" << std::endl;
+    }
 
     for (int iter = 0; iter < totalIterations; ++iter) {
         float** A = createMatrix(n, p);
@@ -79,19 +88,24 @@ int main(int argc, char *argv[]) {
         B = fillMatrixValues(B, n, m);
         C = fillMatrixValues(C, m, p);
 
-        double startTime, endTime;
-        get_walltime(&startTime);
+        // double startTime, endTime; // Changed timing algorithm
+        // get_walltime(&startTime);
+        double startTime = omp_get_wtime();
 
         // Matrix-Matrix Multiplication
+        #pragma omp parallel for collapse(2) // Collapse for loops
+        {
             for (int i = 0; i<n; i++) {
                 for (int j = 0; j<m; j++) {
                     for (int k = 0; k<p; k++) {
                     A[i][j] += B[i][k]*C[k][j];
+                    }
                 }
             }
         }
 
-        get_walltime(&endTime);
+        // get_walltime(&endTime); // Changed Timing Algorithm
+        double endTime = omp_get_wtime();
 
         // Cleanup memory
         deleteMatrix(A, n);
@@ -105,12 +119,19 @@ int main(int argc, char *argv[]) {
         sumRunTime += runTime;
     }
 
+    // double meanRunTime = sumRunTime / totalIterations;
+
+    // std::ofstream outputFile("MatrixMultiplication.txt", std::ios::app); // Create MeanRunTime.txt file
+    // outputFile << meanRunTime << std::endl; // Append content to the file
+    // outputFile.close(); // Close the file
+
     double meanRunTime = sumRunTime / totalIterations;
+    int threads = omp_get_max_threads(); // Get the maximum number of threads
 
-    std::ofstream outputFile("MeanRunTimes.txt", std::ios::app); // Create MeanRunTime.txt file
-    outputFile << meanRunTime << std::endl; // Append content to the file
-    outputFile.close(); // Close the file
-
+    // Writing the data
+    outputFile << n << "," << threads << "," << meanRunTime << std::endl;
+    outputFile.close();
+    
     return 0;
 }
 
