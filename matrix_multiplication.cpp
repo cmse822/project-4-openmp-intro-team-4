@@ -52,9 +52,13 @@ void get_walltime(double* wcTime) {
     get_walltime_(wcTime);
 }
 
+
+
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <matrix_size> <iterations> <n_threads>" << std::endl;
+
+    
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <matrix_size> <iterations> <n_threads> <csv file name>" << std::endl;
         return 1;
     }
 
@@ -70,13 +74,17 @@ int main(int argc, char *argv[]) {
     int req_thread = std::atoi(argv[3]);      // # of threads requested
 
     int totalIterations = std::atoi(argv[2]); // Number of Runs
+
+    const char* csvfile = argv[4]; // Name of the CSV file to
+
+    // cout << csvfile << endl; 
     
     double sumRunTime = 0; // Add up run times for averaging
 
     // Check if file exists to avoid overwriting headers
-    bool fileExists = std::ifstream("MatrixMultiplication.csv").good();
+    bool fileExists = std::ifstream(csvfile).good();
 
-    std::ofstream outputFile("MatrixMultiplication.csv", std::ios::app);
+    std::ofstream outputFile(csvfile, std::ios::app);
     // Write headers if file does not exist
     if (!fileExists) {
         outputFile << "Matrix Size, Iterations, Threads, Average Runtime" << std::endl;
@@ -129,10 +137,6 @@ int main(int argc, char *argv[]) {
     }
 
     double meanRunTime = sumRunTime / totalIterations;
-
-    // std::ofstream outputFile("MatrixMultiplication.txt", std::ios::app); // Create MeanRunTime.txt file
-    // outputFile << meanRunTime << std::endl; // Append content to the file
-    // outputFile.close(); // Close the file
 
     #ifdef _OPENMP
 
