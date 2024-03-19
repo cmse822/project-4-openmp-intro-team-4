@@ -53,8 +53,8 @@ void get_walltime(double* wcTime) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <matrix_size> <iterations>" << std::endl;
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <matrix_size> <iterations> <n_threads>" << std::endl;
         return 1;
     }
 
@@ -67,6 +67,8 @@ int main(int argc, char *argv[]) {
     int m = n;                      // # Columns of B & # Rows of C
     int p = n;                      // # Columns of C
 
+    int req_thread = std::atoi(argv[3]);      // # of threads requested
+
     int totalIterations = std::atoi(argv[2]); // Number of Runs
     
     double sumRunTime = 0; // Add up run times for averaging
@@ -77,7 +79,7 @@ int main(int argc, char *argv[]) {
     std::ofstream outputFile("MatrixMultiplication.csv", std::ios::app);
     // Write headers if file does not exist
     if (!fileExists) {
-        outputFile << "Matrix Size,Threads,Norm" << std::endl;
+        outputFile << "Matrix Size, Iterations, Threads, Average Runtime" << std::endl;
     }
 
     for (int iter = 0; iter < totalIterations; ++iter) {
@@ -90,11 +92,17 @@ int main(int argc, char *argv[]) {
 
         // double startTime, endTime; // Changed timing algorithm
         // get_walltime(&startTime);
-        double startTime = omp_get_wtime();
+        double startTime, endTime;
 
-        // Matrix-Matrix Multiplication
+        get_walltime(&startTime); //use get_walltime so it works regardless 
+
+    // If this is an OpenMP run, set the number of threads
+        #ifdef _OPENMP
+            omp_set_num_threads(req_thread);
+        #endif
+
+        // // Matrix-Matrix Multiplication
         #pragma omp parallel for collapse(2) // Collapse for loops
-        {
             for (int i = 0; i<n; i++) {
                 for (int j = 0; j<m; j++) {
                     for (int k = 0; k<p; k++) {
@@ -102,10 +110,11 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-        }
 
-        // get_walltime(&endTime); // Changed Timing Algorithm
-        double endTime = omp_get_wtime();
+        get_walltime(&endTime);
+    
+
+                
 
         // Cleanup memory
         deleteMatrix(A, n);
@@ -114,24 +123,36 @@ int main(int argc, char *argv[]) {
 
         // Output runtime to console   
         double runTime = endTime - startTime;
-        cout << runTime << endl;
+        // cout << runTime << endl;
 
         sumRunTime += runTime;
     }
 
-    // double meanRunTime = sumRunTime / totalIterations;
+    double meanRunTime = sumRunTime / totalIterations;
 
     // std::ofstream outputFile("MatrixMultiplication.txt", std::ios::app); // Create MeanRunTime.txt file
     // outputFile << meanRunTime << std::endl; // Append content to the file
     // outputFile.close(); // Close the file
 
-    double meanRunTime = sumRunTime / totalIterations;
-    int threads = omp_get_max_threads(); // Get the maximum number of threads
+    #ifdef _OPENMP
+
+        int threads; // Declare an integer variable to store the maximum number of threads
+
+        // Get the maximum number of threads
+        threads = omp_get_max_threads();
+
+    #else
+    // NOTE: if threads = Serial, it is not an openMP run. it is a serial run. 
+        const char* threads = "Serial";
+    #endif
+
 
     // Writing the data
-    outputFile << n << "," << threads << "," << meanRunTime << std::endl;
+    outputFile << n << ','<< totalIterations << "," << threads << "," << meanRunTime << std::endl;
     outputFile.close();
+
     
+    // printf("hello");
     return 0;
 }
 
