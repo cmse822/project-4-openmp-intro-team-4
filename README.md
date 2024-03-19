@@ -21,8 +21,13 @@ Now, let's implement so OpenMP loop parallelism.
 
 1. Modify your MMM code from Project 1 to implement OpenMP threading by adding appropriate compiler directives to the outer loop of the MMM kernel. When compiling the OpenMP version of your code be sure to include the appropriate compiler flag (`-fopenmp` for GCC).
 2. Compute the time-to-solution of your MMM code for 1 thread (e.g., `export OMP_NUM_THREADS=1`) to the non-OpenMP version (i.e., compiled without the `-fopenmp` flag). Any matrix size `N` will do here. Does it perform as you expect? If not, consider the OpenMP directives you are using.
+![alt text](Serial_Vs_1Thread.jpg)
 3. Perform a thread-to-thread speedup study of your MMM code either on your laptop or HPCC. Compute the total time to solution for a few thread counts (in powers of 2): `1,2,4,...T`, where T is the maximum number of threads available on the machine you are using. Do this for matrix sizes of `N=20,100,1000`.
 4. Plot the times-to-solution for the MMM for each value of `N` separately as functions of the the thread count `T`. Compare the scaling of the MMM for different matrix dimensions.
+![alt text](TimeVsThreads_N20.jpg)
+![alt text](TimeVsThreads_N100.jpg)
+![alt text](TimeVsThreads_N1000.jpg)
+
 5. Verify that for the same input matrices that the solution does not depend on the number of threads.
 
 ## Part 2: Adding OpenMP threading to a simple MPI application
