@@ -149,6 +149,7 @@ int main(int argc, char *argv[]) {
         } else {
             // Calculate number of rows in this rank
             int num_rows = end_row - start_row;
+
             // Create an MPI_Request array with one request for each send operation
             MPI_Request requests[num_rows];
             int request_counter = 0;
@@ -158,6 +159,7 @@ int main(int argc, char *argv[]) {
                     for (int j=0; j<m; j++) {
                         for (int k=0; k<p; k++) {
                             A[i][j] += B[i][k]*C[k][j];
+                            cout << A[i][j];
                         }
                     }
 
