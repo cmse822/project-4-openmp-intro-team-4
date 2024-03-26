@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
                     // Only send if rank is not 0
                     MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
-                    }
+                }
         }
         
         get_walltime(&endTime);
