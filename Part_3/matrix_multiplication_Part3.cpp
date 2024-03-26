@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
                 }
         } else {
             // Calculate number of rows in this rank
-            int num_rows = end_row - start_row;
+            int num_rows = end_row - start_row + 1;
 
             // Create an MPI_Request array with one request for each send operation
             MPI_Request requests[num_rows];
