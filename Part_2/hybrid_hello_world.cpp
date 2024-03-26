@@ -16,8 +16,8 @@ int main(int argc, char* argv[])
 
     #pragma omp parallel
     {
-        const id = omp_get_thread_num();
-        const num_threads = omp_get_num_threads();
+        int id = omp_get_thread_num();
+        int num_threads = omp_get_num_threads();
         cout << "This is thread " << id + 1 << " of " << num_threads << " in rank " << rank << endl;
     }
     
