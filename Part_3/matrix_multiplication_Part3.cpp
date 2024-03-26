@@ -26,7 +26,8 @@ float** createMatrix(int rows, int cols) {
 
 void deleteMatrix(float** matrix, int rows) {
     // rows = sizeof(matrix) / sizeof(matrix[0]) // Implement this line to take away the necesity of passing in rows
-    for (int i = 0; i < rows; i++) {  // Iterate over rows
+    for (int i = 0; i < rows; i++) {  
+        // Iterate over rows
         delete[] matrix[i];  // Deallocate memory for column at each row pointer
     }
 
@@ -130,11 +131,11 @@ int main(int argc, char *argv[]) {
 
         // printf("\nstart row %d, end row %d, rank %d\n", start_row,end_row,rank);
 
-        /*MPI Communication - Collect Results on a 
-        Single Rank
+        /*
+        MPI Communication - Collect Results on a Single Rank
         
         Notes: 
-        - could only figure out how to send/recieve one row at a time
+            - could only figure out how to send/recieve one row at a time
         */
 
         if (rank == 0) {
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]) {
             // Create an MPI_Request array with one request for each send operation
             MPI_Request requests[num_rows];
 
-            #pragma omp parallel for
+            #pragma omp parallel for collapse(3)
                 for (int i=start_row; i<=end_row; i++) {
                     for (int j=0; j<m; j++) {
                         for (int k=0; k<p; k++) {
@@ -193,7 +194,7 @@ int main(int argc, char *argv[]) {
             MPI_Waitall(n - num_rows_task, requests, MPI_STATUS_IGNORE);
         }
 
-    // if rank is zero and its the last iteration
+        // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
             printf("Entering serial check\n");
 
@@ -216,9 +217,7 @@ int main(int argc, char *argv[]) {
                 A_check[i] = new bool[m];
             }     
 
-            /*Check if the difference between the 
-            parallel and serial versions is within 
-            tolerance*/
+            /*Check if the difference between the parallel and serial versions is within tolerance*/
             double diff = 0.0;
             for (int i = 0; i <n; i++) {
                 for (int j = 0; j<m; j++) {
@@ -226,6 +225,7 @@ int main(int argc, char *argv[]) {
 
                     if (fabs(diff) < 1e-16) {
                         A_check[i][j] = true ;
+                        printf("!!!!Matrices are equal!!!!\n");
                     }
                     else {
                         A_check[i][j] = false;
@@ -246,17 +246,18 @@ int main(int argc, char *argv[]) {
             std::ofstream fileC("C.txt");
 
             for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                fileA << A[i][j] << " ";
-                fileA_serial << A_serial[i][j] << " ";
-                fileB << B[i][j] << " ";
-                fileC << C[i][j] << " ";
-                }  
+                for (int j = 0; j < m; j++) {
+                    fileA << A[i][j] << " ";
+                    fileA_serial << A_serial[i][j] << " ";
+                    fileB << B[i][j] << " ";
+                    fileC << C[i][j] << " ";
+                } 
+
                 fileA << "\n";
                 fileA_serial << "\n";
                 fileB << "\n";
                 fileC << "\n";
-             }
+            }
 
             fileA.close();
             fileA_serial.close();
@@ -268,19 +269,13 @@ int main(int argc, char *argv[]) {
 
             double meanRunTime = elapsed_time / totalIterations;
 
-            /*If rank is zero, then run the serial calculation to compare 
-                with the parallel version*/
-                
-
+            /*If rank is zero, then run the serial calculation to compare with the parallel version*/
             #ifdef _OPENMP
-
-                int threads; // Declare an integer variable to store the maximum number of threads
-
-                // Get the maximum number of threads
+                // Declare an integer variable to store the maximum number of threads
+                int threads;
                 threads = omp_get_max_threads();
-
             #else
-            // NOTE: if threads = Serial, it is not an openMP run. it is a serial run. 
+                // NOTE: if threads = Serial, it is not an openMP run. it is a serial run. 
                 const char* threads = "Serial";
             #endif
 
@@ -291,21 +286,11 @@ int main(int argc, char *argv[]) {
             if (!fileExists) {
                 outputFile << "Matrix Size,Iterations,OpenMP Threads,MPI Tasks,Average Runtime,Serial == Parallel?" << std::endl;
             }
+
             // Writing the data
             outputFile << n << ','<< totalIterations << "," << threads << "," << numtasks << ',' << meanRunTime << ','<< all_true <<std::endl;
             outputFile.close();
-
-
         }
-        
-
-            //     printf("\nCleaning up memory\n");
-            //     // Cleanup memory
-            //         deleteMatrix(A, n);
-            //         deleteMatrix(B, n);
-            //         deleteMatrix(C, m);
-
-            //     printf("\nDone Cleaning up memory\n");
     }
 
     MPI_Finalize();
