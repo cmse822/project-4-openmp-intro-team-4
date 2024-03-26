@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     // Only send if rank is not 0
-                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
+                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, i-start_row, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
                 }
 
@@ -184,11 +184,11 @@ int main(int argc, char *argv[]) {
             #pragma omp parallel for
                 for (int i = 1; i < numtasks; i++) {
                     if (i == numtasks - 1) {
-                        num_rows_task = n - num_rows_task * (numtasks - 1);
+                        num_rows_task = n - (num_rows_task * (numtasks - 1));
                     }
 
                     for (int row = 0; row < num_rows_task; row++) {
-                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &requests[request_counter]);
+                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, row, MPI_COMM_WORLD, &requests[request_counter]);
                         request_counter++;
                     }
                 }
