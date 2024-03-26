@@ -167,8 +167,6 @@ int main(int argc, char *argv[]) {
                     request_counter++;
                 }
 
-            cout << num_rows << " " << request_counter;
-
             // Wait for all non-blocking operations to complete
             MPI_Waitall(request_counter, requests, MPI_STATUS_IGNORE);
         }
