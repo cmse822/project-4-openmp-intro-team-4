@@ -1,0 +1,63 @@
+#!/bin/bash --login
+# Job name:
+#SBATCH --job-name=MatrixMultiplicationOpenMPI
+
+# TODO: Edit
+# Number of nodes
+#SBATCH --nodes=2
+
+# TODO: Edit
+# Number of tasks to run on each node
+#SBATCH --ntasks-per-node=1
+
+# Memory per Node
+# Specify "M" or "G" for MB and GB respectively
+#SBATCH --mem=1G
+
+# Wall time
+# Format: "minutes", "hours:minutes:seconds", 
+# "days-hours", or "days-hours:minutes"
+#SBATCH --time=01:00:00
+
+# Standard output and error to file
+# %x: job name, %j: job ID
+#SBATCH --output=%x-%j.SLURMout
+
+# Purge current modules and load those we require
+module purge
+module load GCC/10.3.0 OpenMPI/4.1.1
+
+# Run our job
+csv_file_name='matrix_multultiplication_Part3.csv'
+
+executable_name='matrix_multiplication.out'
+
+mpicxx matrix_multiplication_Part3.cpp -o $executable_name -fopenmp
+
+# Matrix Size
+matrix_sizes=(64 128 1024)
+
+# Num OpenMP Threads
+num_threads_sizes=(2 4 6 8 10 12 14 16 18 20 22 24)
+
+# Num MPI Tasks
+num_tasks_sizes=(2 4 8 16 32)
+
+# Print the Matrix Sizes & Number of Threads
+echo "${matrix_sizes[@]}"
+echo "${num_threads_sizes[@]}"
+echo "${num_tasks_sizes[@]}"
+
+# Run Executables
+for matrix_size in "${matrix_sizes[@]}"; do
+    for num_threads in "${num_threads_sizes[@]}"; do
+        for num_task in "${num_tasks_sizes[@]}"; do 
+            echo "Starting Matrix Multiplication with N = {$matrix_size}, OpenMP Threads = {$num_threads}, and MPI tasks = {$num_task} "
+            srun -n $num_task $executable_name $matrix_size 10 $num_threads $csv_file_name
+        done 
+    done
+done
+
+# Print Resource Information
+# scontrol show job $SLURM_JOB_ID
+# js -j $SLURM_JOB_ID
