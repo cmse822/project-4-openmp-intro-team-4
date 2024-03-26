@@ -153,14 +153,14 @@ int main(int argc, char *argv[]) {
             MPI_Request requests[num_rows];
             int request_counter = 0;
 
-            #pragma omp parallel for collapse(2)
+            #pragma omp parallel for
                 for (int i=start_row; i<=end_row; i++) {
                     for (int j=0; j<m; j++) {
                         for (int k=0; k<p; k++) {
                             A[i][j] += B[i][k]*C[k][j];
                         }
                     }
-                    
+
                     // Only send if rank is not 0
                     MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
