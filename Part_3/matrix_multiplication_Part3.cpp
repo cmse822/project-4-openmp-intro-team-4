@@ -165,6 +165,9 @@ int main(int argc, char *argv[]) {
                     MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
                 }
+
+            // Wait for all non-blocking operations to complete
+            MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
         }
         
         get_walltime(&endTime);
@@ -188,10 +191,10 @@ int main(int argc, char *argv[]) {
                         request_counter++;
                     }
                 }
-        }
 
-        // Wait for all non-blocking operations to complete
-        MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
+            // Wait for all non-blocking operations to complete
+            MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
+        }
 
     // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
