@@ -19,11 +19,9 @@ float** createMatrix(int rows, int cols) {
         for (int j = 0; j < cols; j++) {
             matrix[i][j] = 0.0;
         }
-
-    
     }
-return matrix;
     
+    return matrix;
 }
 
 void deleteMatrix(float** matrix, int rows) {
@@ -31,6 +29,7 @@ void deleteMatrix(float** matrix, int rows) {
     for (int i = 0; i < rows; i++) {  // Iterate over rows
         delete[] matrix[i];  // Deallocate memory for column at each row pointer
     }
+
     delete[] matrix;  // Deallocate memory for original row points
 }
 
@@ -40,6 +39,7 @@ float** fillMatrixValues(float** matrix, int rows, int cols) {
             matrix[i][j] = static_cast<float>(rand()) / RAND_MAX;
         }   
     }
+
     return matrix;
 }
 
@@ -62,11 +62,7 @@ void get_walltime(double* wcTime) {
     get_walltime_(wcTime);
 }
 
-
-
 int main(int argc, char *argv[]) {
-
-   
     if (argc != 5) {
         std::cerr << "Usage: " << argv[0] << " <matrix_size> <iterations> <n_threads> <csv file name>" << std::endl;
         return 1;
@@ -81,10 +77,8 @@ int main(int argc, char *argv[]) {
     int m = n;                      // # Columns of B & # Rows of C
     int p = n;                      // # Columns of C
 
-    int req_thread = std::atoi(argv[3]);      // # of threads requested
-
     int totalIterations = std::atoi(argv[2]); // Number of Runs
-
+    int req_thread = std::atoi(argv[3]);      // # of threads requested
     const char* csvfile = argv[4]; // Name of the CSV file to
 
     int numtasks, rank;
@@ -93,8 +87,6 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    // cout << csvfile << endl; 
     
     double sumRunTime = 0; // Add up run times for averaging
     double start_time, end_time, elapsed_time;
@@ -128,38 +120,15 @@ int main(int argc, char *argv[]) {
         /*Distribute the "i" row of B accross MPI ranks. Therefore, 
         The i loop has dependency on the rank*/ 
 
-        /*Determine the start and end row for MPI.
-        Must be evenly divisible for now*/
+        /*Determine the start and end row for MPI.*/
         int start_row = (n/numtasks)*rank;
         int end_row = start_row + ((n/numtasks)- 1);
 
+        if (end_row >= n) {
+            end_row = n-1;
+        }
+
         // printf("\nstart row %d, end row %d, rank %d\n", start_row,end_row,rank);
-
-        #pragma omp parallel for collapse(2)
-            for (int i = start_row; i<=end_row; i++) {
-                for (int j = 0; j<m; j++) {
-                    for (int k = 0; k<p; k++) {
-                    A[i][j] += B[i][k]*C[k][j];
-                    }
-                }
-            }
-
-        get_walltime(&endTime);
-
-
-        // /*Debugging - write the rank 1 matrix to an output file*/
-        // if (rank == 1){
-        //     for (int i = 0; i < n; i++) {
-        //         for (int j = 0; j < m; j++) {
-        //             std::cout << A[i][j] << " ";
-        //         }  
-        //         std::cout << "\n";
-        //     }
-        // }
-
-
-
-
 
         /*MPI Communication - Collect Results on a 
         Single Rank
@@ -168,25 +137,52 @@ int main(int argc, char *argv[]) {
         - could only figure out how to send/recieve one row at a time
         */
 
-        // Calculate rows per process
-        int rows_per_process = n / numtasks;
+        // Calculate number of rows in this rank
+        int num_rows = end_row - start_row
+        
+        // We are only creating send request objects if rank is not equal to 0
+        if (rank != 0) {
+            // Create an MPI_Request array with one request for each send operation
+            MPI_Request requests[num_rows];
+            int request_counter = 0;
+        }
 
-        // Create an MPI_Request array with one request for each send/receive operation
-        MPI_Request requests[numtasks * rows_per_process];
-        int request_counter = 0;
-
-        if (rank == 0) {
-            for (int i = 1; i < numtasks; i++) {
-                for (int row = 0; row < rows_per_process; row++) {
-                    MPI_Irecv(&A[rows_per_process*i + row][0], n, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &requests[request_counter]);
+        #pragma omp parallel for collapse(2)
+            for (int i=start_row; i<=end_row; i++) {
+                for (int j=0; j<m; j++) {
+                    for (int k=0; k<p; k++) {
+                        A[i][j] += B[i][k]*C[k][j];
+                    }
+                }
+                
+                // Only send if rank is not 0
+                if (rank != 0) {
+                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
                 }
             }
-        } else {
-            for (int row = 0; row < rows_per_process; row++) {
-                MPI_Isend(&A[rows_per_process*rank + row][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
-                request_counter++;
-            }
+
+        get_walltime(&endTime);
+
+        if (rank == 0) {
+            int num_rows_task = n/numtasks;
+
+            // Create an MPI_Request array with one request for each receive operation
+            MPI_Request requests[n - num_rows_task];
+            int request_counter = 0;
+
+            // Receive from all ranks other than zero and use threads to speed up the process
+            #pragma omp parallel for
+                for (int i = 1; i < numtasks; i++) {
+                    if (i == numtasks - 1) {
+                        num_rows_task = n - num_rows_task * (numtasks - 1);
+                    }
+
+                    for (int row = 0; row < num_rows_task; row++) {
+                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &requests[request_counter]);
+                        request_counter++;
+                    }
+                }
         }
 
         // Wait for all non-blocking operations to complete
@@ -194,7 +190,6 @@ int main(int argc, char *argv[]) {
 
     // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
-
             printf("Entering serial check\n");
 
             // Allocate memory for the rows (array of pointers)
@@ -206,7 +201,7 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i<n; i++) {
                 for (int j = 0; j<m; j++) {
                     for (int k = 0; k<p; k++) {
-                    A_serial[i][j] += B[i][k]*C[k][j];
+                        A_serial[i][j] += B[i][k]*C[k][j];
                     }
                 }
             }
