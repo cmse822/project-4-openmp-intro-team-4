@@ -137,31 +137,36 @@ int main(int argc, char *argv[]) {
         - could only figure out how to send/recieve one row at a time
         */
 
-        // Calculate number of rows in this rank
-        int num_rows = end_row - start_row
-        
-        // We are only creating send request objects if rank is not equal to 0
-        if (rank != 0) {
+        if (rank == 0) {
+            #pragma omp parallel for collapse(2)
+                for (int i=start_row; i<=end_row; i++) {
+                    for (int j=0; j<m; j++) {
+                        for (int k=0; k<p; k++) {
+                            A[i][j] += B[i][k]*C[k][j];
+                        }
+                    }
+                }
+        } else {
+            // Calculate number of rows in this rank
+            int num_rows = end_row - start_row;
             // Create an MPI_Request array with one request for each send operation
             MPI_Request requests[num_rows];
             int request_counter = 0;
-        }
 
-        #pragma omp parallel for collapse(2)
-            for (int i=start_row; i<=end_row; i++) {
-                for (int j=0; j<m; j++) {
-                    for (int k=0; k<p; k++) {
-                        A[i][j] += B[i][k]*C[k][j];
+            #pragma omp parallel for collapse(2)
+                for (int i=start_row; i<=end_row; i++) {
+                    for (int j=0; j<m; j++) {
+                        for (int k=0; k<p; k++) {
+                            A[i][j] += B[i][k]*C[k][j];
+                        }
                     }
-                }
-                
-                // Only send if rank is not 0
-                if (rank != 0) {
+                    
+                    // Only send if rank is not 0
                     MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
                     request_counter++;
-                }
-            }
-
+                    }
+        }
+        
         get_walltime(&endTime);
 
         if (rank == 0) {
@@ -304,14 +309,5 @@ int main(int argc, char *argv[]) {
     }
 
     MPI_Finalize();
-
-    
-
-    
-
-                
-
     return 0;
-
-    
 }
