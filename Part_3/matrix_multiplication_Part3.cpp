@@ -152,7 +152,6 @@ int main(int argc, char *argv[]) {
 
             // Create an MPI_Request array with one request for each send operation
             MPI_Request requests[num_rows];
-            int request_counter = 0;
 
             #pragma omp parallel for
                 for (int i=start_row; i<=end_row; i++) {
@@ -163,12 +162,11 @@ int main(int argc, char *argv[]) {
                     }
 
                     // Only send if rank is not 0
-                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, i-start_row, MPI_COMM_WORLD, &requests[request_counter]);
-                    request_counter++;
+                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, i-start_row, MPI_COMM_WORLD, &requests[i-start_row]);
                 }
 
             // Wait for all non-blocking operations to complete
-            MPI_Waitall(request_counter, requests, MPI_STATUS_IGNORE);
+            MPI_Waitall(num_rows, requests, MPI_STATUS_IGNORE);
         }
         
         get_walltime(&endTime);
@@ -178,7 +176,6 @@ int main(int argc, char *argv[]) {
 
             // Create an MPI_Request array with one request for each receive operation
             MPI_Request requests[n - num_rows_task];
-            int request_counter = 0;
 
             // Receive from all ranks other than zero and use threads to speed up the process
             #pragma omp parallel for
@@ -188,13 +185,12 @@ int main(int argc, char *argv[]) {
                     }
 
                     for (int row = 0; row < num_rows_task; row++) {
-                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, row, MPI_COMM_WORLD, &requests[request_counter]);
-                        request_counter++;
+                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, row, MPI_COMM_WORLD, &requests[num_rows_task*(i - 1) + row]);
                     }
                 }
 
             // Wait for all non-blocking operations to complete
-            MPI_Waitall(request_counter, requests, MPI_STATUS_IGNORE);
+            MPI_Waitall(n - num_rows_task, requests, MPI_STATUS_IGNORE);
         }
 
     // if rank is zero and its the last iteration
