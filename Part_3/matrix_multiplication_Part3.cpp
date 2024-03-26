@@ -102,12 +102,6 @@ int main(int argc, char *argv[]) {
     // Check if file exists to avoid overwriting headers
     bool fileExists = std::ifstream(csvfile).good();
 
-    std::ofstream outputFile(csvfile, std::ios::app);
-    // Write headers if file does not exist
-    if (!fileExists) {
-        outputFile << "Matrix Size,Iterations,OpenMP Threads,MPI Tasks,Average Runtime,Serial == Parallel?" << std::endl;
-    }
-
     start_time = MPI_Wtime(); //get start time using MPI function
 
     for (int iter = 0; iter < totalIterations; ++iter) {
@@ -172,39 +166,34 @@ int main(int argc, char *argv[]) {
         
         Notes: 
         - could only figure out how to send/recieve one row at a time
-        - using blocking communication for now.
         */
 
-        //if Rank is zero, recieve data from all processors (need to loop?)
+        // Calculate rows per process
+        int rows_per_process = n / numtasks;
+
+        // Create an MPI_Request array with one request for each send/receive operation
+        MPI_Request requests[numtasks * rows_per_process];
+        int request_counter = 0;
+
         if (rank == 0) {
-            
-            for (int i = 1; i<(numtasks); i++){
-                for (int row = 0; row < (n/numtasks); row++){
-                    MPI_Recv(&A[(n/numtasks)*(i) + row][0],n,MPI_FLOAT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+            for (int i = 1; i < numtasks; i++) {
+                for (int row = 0; row < rows_per_process; row++) {
+                    MPI_Irecv(&A[rows_per_process*i + row][0], n, MPI_FLOAT, i, 0, MPI_COMM_WORLD, &requests[request_counter]);
+                    request_counter++;
                 }
             }
-
+        } else {
+            for (int row = 0; row < rows_per_process; row++) {
+                MPI_Isend(&A[rows_per_process*rank + row][0], n, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &requests[request_counter]);
+                request_counter++;
+            }
         }
 
-        //If rank isnt zero, send data      
-        else {
-            //Could only figure out how to send one row at a time 
-            for (int row = 0; row < (n/numtasks); row++){
-
-                MPI_Send(&A[(n/numtasks)*rank + row][0],n,MPI_FLOAT,0,0,MPI_COMM_WORLD);
-
-            }         
-
-        }
+        // Wait for all non-blocking operations to complete
+        MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
 
     // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
-
-            // Calculte runTime  
-            // double runTime = endTime - startTime;
-            // cout << runTime << endl;
-
-            // sumRunTime += runTime;
 
             printf("Entering serial check\n");
 
@@ -296,6 +285,12 @@ int main(int argc, char *argv[]) {
             #endif
 
             printf("Writing Output Data\n");
+
+            std::ofstream outputFile(csvfile, std::ios::app);
+            // Write headers if file does not exist
+            if (!fileExists) {
+                outputFile << "Matrix Size,Iterations,OpenMP Threads,MPI Tasks,Average Runtime,Serial == Parallel?" << std::endl;
+            }
             // Writing the data
             outputFile << n << ','<< totalIterations << "," << threads << "," << numtasks << ',' << meanRunTime << ','<< all_true <<std::endl;
             outputFile.close();
