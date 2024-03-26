@@ -159,7 +159,6 @@ int main(int argc, char *argv[]) {
                     for (int j=0; j<m; j++) {
                         for (int k=0; k<p; k++) {
                             A[i][j] += B[i][k]*C[k][j];
-                            cout << A[i][j];
                         }
                     }
 
