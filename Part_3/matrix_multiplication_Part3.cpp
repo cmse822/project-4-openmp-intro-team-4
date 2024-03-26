@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
                 }
 
             // Wait for all non-blocking operations to complete
-            MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
+            MPI_Waitall(request_counter, requests, MPI_STATUS_IGNORE);
         }
         
         get_walltime(&endTime);
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
                 }
 
             // Wait for all non-blocking operations to complete
-            MPI_Waitall(request_counter, requests, MPI_STATUSES_IGNORE);
+            MPI_Waitall(request_counter, requests, MPI_STATUS_IGNORE);
         }
 
     // if rank is zero and its the last iteration
