@@ -75,6 +75,15 @@ Now, let's combine OpenMP and MPI functionality into a hybrid parallel version o
 
 1. Add MPI to  you OpenMP MMM code by distributing the rows of one of the input matrices across MPI ranks. Have each MPI rank perform its portion of the MMM using OpenMP threading. Think very carefully about the structure of the main MMM loops! Once done, gather the resulting matrix on rank 0 and output the result. Verify that for the same input matrices the result does not depend on either the number of MPI ranks or the number of OpenMP threads per rank. 
 2. On HPCC, carry out a performance study in which you vary the number of MPI ranks, the number of OpenMP threads per rank, and the matrix size. Make plots showing the times to solution for the various cases. Explain your results.
+![alt text](Part_3/1024_performance.png)
+
+![alt text](Part_3/rank_2_performance.png)
+
+![alt text](Part_3/6_threads_performance.png)
+
+In most cases, as seen from the graphs, as the number of threads and ranks are increased, the time taken decreases, which is expected. But this is not true in matrices of all sizes. For smaller matrices, the time to set up the threads and the ranks negates the performance gain that could be acquired. But the performance gain is clearly visible in matrices of bigger size.
+
+For more plots, please refer to ```Part_3/visualization.ipynb```
 
 ## What to turn in
 
