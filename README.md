@@ -50,6 +50,22 @@ Take a look at the Hello World applications that we have used in past assignment
 4. Run the code using 2 MPI ranks and 4 OpenMP threads per rank. To do this, prior to executing the run command, set the number of threads environment variable as `> export OMP_NUM_THREADS=4`. Then you can simply execute the application with the `mpiexec` command: `> mpiexec -n 2 ./a.out`.
 5. Explain the output.
 
+Output:
+
+```
+Before initialization
+Before initialization
+This is thread This is thread This is thread This is thread 2 of 34 in rank 141 of  of 4 in rank 41
+This is thread This is thread This is thread This is thread 2341 of 4 in rank 0 of 4 in rank 0 of 
+ of 4 in rank 1
+ of 4 in rank 0
+4 in rank 
+0 in rank 1
+After initialize
+After initialize
+```
+The outputs outside the OpenMP sections are ordered. But the outputs in the OpenMP sections are not ordered, since they are all executed parallely in the 4 threads in an unordered fashion. But it is somewhat clear from the output that four threads and 2 ranks were in operation.
+
 ## Part 3: Hybrid Parallel Matrix Multiplication
 
 Now, let's combine OpenMP and MPI functionality into a hybrid parallel version of the MMM. 
