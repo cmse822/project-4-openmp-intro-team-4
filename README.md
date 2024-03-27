@@ -74,6 +74,7 @@ The outputs outside the OpenMP sections are ordered. But the outputs in the Open
 Now, let's combine OpenMP and MPI functionality into a hybrid parallel version of the MMM. 
 
 1. Add MPI to  you OpenMP MMM code by distributing the rows of one of the input matrices across MPI ranks. Have each MPI rank perform its portion of the MMM using OpenMP threading. Think very carefully about the structure of the main MMM loops! Once done, gather the resulting matrix on rank 0 and output the result. Verify that for the same input matrices the result does not depend on either the number of MPI ranks or the number of OpenMP threads per rank. 
+ - The matrix-matrix multiplication was verified against the serial calculation for each combination of matrix size, openMP thread count, and MPI rank count. At the end of the parallel calculation, rank zero performs the serial calculation. Each element of the serial calculation resultant matrix is compared to the corresponding element of the parallel calculation resultant matrix. The final column within the output CSV file "matrix_multiplcation_Part3_final.csv" is equal to one if all elements of the serial and parallel resultant matrices are equal. As seen in the output file, the matrices were equal for all the combinations tested.  
 2. On HPCC, carry out a performance study in which you vary the number of MPI ranks, the number of OpenMP threads per rank, and the matrix size. Make plots showing the times to solution for the various cases. Explain your results.
 ![alt text](Part_3/1024_performance.png)
 
