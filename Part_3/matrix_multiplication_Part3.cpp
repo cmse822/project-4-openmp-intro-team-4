@@ -220,6 +220,11 @@ int main(int argc, char *argv[]) {
 
         // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
+            end_time = MPI_Wtime(); //get end time using MPI function
+            elapsed_time = end_time - start_time;
+
+            double meanRunTime = elapsed_time / totalIterations;
+
             printf("Entering serial check\n");
 
             // Allocate memory for the rows (array of pointers)
@@ -285,11 +290,6 @@ int main(int argc, char *argv[]) {
             fileA_serial.close();
             fileB.close();
             fileC.close();
-
-            end_time = MPI_Wtime(); //get end time using MPI function
-            elapsed_time = end_time - start_time;
-
-            double meanRunTime = elapsed_time / totalIterations;
 
             /*If rank is zero, then run the serial calculation to compare with the parallel version*/
             #ifdef _OPENMP
