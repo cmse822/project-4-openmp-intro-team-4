@@ -125,12 +125,11 @@ int main(int argc, char *argv[]) {
         int start_row = (n/numtasks)*rank;
         int end_row = start_row + ((n/numtasks)- 1);
 
-        if (end_row >= n) {
+        // Set the end_row of the final rank to be the last row of the matrix
+        if (rank == numtasks - 1) {
             end_row = n-1;
         }
-
-        // printf("\nstart row %d, end row %d, rank %d\n", start_row,end_row,rank);
-
+        
         /*
         MPI Communication - Collect Results on a Single Rank
         
@@ -147,52 +146,77 @@ int main(int argc, char *argv[]) {
                         }
                     }
                 }
+
+            cout << "Finished multiplication";
         } else {
-            // Calculate number of rows in this rank
-            int num_rows = end_row - start_row + 1;
-
-            // Create an MPI_Request array with one request for each send operation
-            MPI_Request requests[num_rows];
-
-            #pragma omp parallel for collapse(3)
+            #pragma omp parallel for
                 for (int i=start_row; i<=end_row; i++) {
                     for (int j=0; j<m; j++) {
                         for (int k=0; k<p; k++) {
                             A[i][j] += B[i][k]*C[k][j];
                         }
                     }
-
-                    // Only send if rank is not 0
-                    MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, i-start_row, MPI_COMM_WORLD, &requests[i-start_row]);
                 }
+
+            // Calculate number of rows in this rank
+            int num_rows = end_row - start_row + 1;
+
+            // Create an MPI_Request array with one request for each send operation
+            MPI_Request requests[num_rows];
+
+            // Only send if rank is not 0
+            for (int i=start_row; i<=end_row; i++) {
+                MPI_Isend(&A[i][0], n, MPI_FLOAT, 0, i-start_row, MPI_COMM_WORLD, &requests[i-start_row]);
+            }
 
             // Wait for all non-blocking operations to complete
             MPI_Waitall(num_rows, requests, MPI_STATUS_IGNORE);
         }
-        
-        get_walltime(&endTime);
 
         if (rank == 0) {
             int num_rows_task = n/numtasks;
+            int total_requests = n - num_rows_task;
+            int start_row = 0;
+            int request_counter = 0;
 
             // Create an MPI_Request array with one request for each receive operation
-            MPI_Request requests[n - num_rows_task];
+            MPI_Request requests[total_requests];
 
             // Receive from all ranks other than zero and use threads to speed up the process
-            #pragma omp parallel for
-                for (int i = 1; i < numtasks; i++) {
-                    if (i == numtasks - 1) {
-                        num_rows_task = n - (num_rows_task * (numtasks - 1));
-                    }
+            for (int i = 1; i < numtasks; i++) {
+                start_row += num_rows_task;
 
-                    for (int row = 0; row < num_rows_task; row++) {
-                        MPI_Irecv(&A[num_rows_task*i + row][0], n, MPI_FLOAT, i, row, MPI_COMM_WORLD, &requests[num_rows_task*(i - 1) + row]);
-                    }
+                if (i == numtasks - 1) {
+                    num_rows_task = n - (num_rows_task * (numtasks - 1));
                 }
 
+                for (int row = 0; row < num_rows_task; row++) {
+                    MPI_Irecv(&A[start_row + row][0], n, MPI_FLOAT, i, row, MPI_COMM_WORLD, &requests[request_counter]);
+                    request_counter++;
+                }
+            }
+
             // Wait for all non-blocking operations to complete
-            MPI_Waitall(n - num_rows_task, requests, MPI_STATUS_IGNORE);
+            MPI_Waitall(total_requests, requests, MPI_STATUS_IGNORE);
+
+            // MPI_Request requests[numtasks];
+            // int num_rows_task = n/numtasks;
+            // int start_row = 0;
+
+            // for (int i = 1; i < numtasks; i++) { 
+            //     if (i == numtasks - 1) {
+            //         num_rows_task = n - (num_rows_task * (numtasks - 1));
+            //     }
+            //     start_row += num_rows_task;
+
+            //     MPI_Irecv(&A[start_row][0], n * num_rows_task, MPI_FLOAT, i, i, MPI_COMM_WORLD, &requests[i]);
+            // }
+
+            // MPI_Waitall(numtasks, requests, MPI_STATUS_IGNORE);
+
         }
+
+        get_walltime(&endTime);
 
         // if rank is zero and its the last iteration
         if((rank == 0) && (iter == totalIterations -1)){
@@ -225,7 +249,6 @@ int main(int argc, char *argv[]) {
 
                     if (fabs(diff) < 1e-16) {
                         A_check[i][j] = true ;
-                        printf("!!!!Matrices are equal!!!!\n");
                     }
                     else {
                         A_check[i][j] = false;
@@ -235,7 +258,6 @@ int main(int argc, char *argv[]) {
                         // return false;
                     }
                 if (all_true == false) {break;}
-                
                 }
             }
 
